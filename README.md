@@ -16,8 +16,8 @@ one firmware. See [What changed in version 2](#what-changed-in-version-2).
 
 > ### ⚠️ Device support
 >
-> **Version 1 was developed and tested only on the Xteink X3.** Version 2 builds for the same
-> devices, but is newer and has had far less time on real hardware.
+> **Developed and tested only on the Xteink X3**, in both version 1 and version 2. That is the
+> only device this has actually run on.
 >
 > | Device | Status |
 > | --- | --- |
