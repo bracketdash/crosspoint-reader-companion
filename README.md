@@ -191,7 +191,7 @@ the exact build you had.
 
 **No toolchain needed:**
 
-1. Download `firmware.bin` from the [latest release](https://github.com/bracketdash/crosspoint-reader-companion/releases/latest)
+1. Download `crosspoint-2.0.0-x3-x4.bin` from the [latest release](https://github.com/bracketdash/crosspoint-reader-companion/releases/latest)
 2. Connect your device by USB-C and wake it
 3. Go to [crosspointreader.com/#flash-tools](https://crosspointreader.com/#flash-tools)
 4. Pick your device (**X3** or **X4**), choose **Custom .bin**, and upload the file
@@ -200,7 +200,7 @@ the exact build you had.
 
 ```bash
 esptool --chip esp32c3 --port /dev/cu.usbmodemXXXX --baud 921600 \
-  write-flash 0x10000 firmware.bin
+  write-flash 0x10000 crosspoint-2.0.0-x3-x4.bin
 ```
 
 Your books, reading progress, settings and saved Wi-Fi networks all live on the SD card — the
