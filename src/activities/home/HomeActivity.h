@@ -63,6 +63,24 @@ class HomeActivity final : public Activity {
     if (idx == i) return HomeMenuItem::SETTINGS_MENU;
     return HomeMenuItem::NONE;
   }
+  // Rotates the companion's line so each visit to Home gets a different one
+  // while it stays stable as the cursor moves around the menu.
+  uint32_t companionQuoteIndex = 0;
+  // Advances on every home repaint to drive the companion's walk cycle.
+  uint32_t companionFrame = 0;
+  // Right edge the menu was last drawn to. The companion can sit in the space
+  // beside a narrowed menu, so touch must not claim the full row width there.
+  int companionMenuRight = 0;
+  // Draws the companion and its speech bubble in the region the theme set aside
+  // for it. No-op unless enabled.
+  void drawCompanion(Rect region) const;
+  // Side-by-side fallback for themes whose menu leaves too little height to
+  // stack the status under the character.
+  void drawCompanionCompact(int stripTop, int available, int leftEdge, int pageWidth, const char* label,
+                            const char* sub, const char* quote) const;
+  // Stacked fallback for a region taller than it is wide: a column beside the
+  // menu rather than a strip beneath it.
+  void drawCompanionColumn(Rect region, const char* label, const char* sub, const char* quote) const;
   void onRecentBookSelected(const std::string& path);
   void onFileBrowserOpen();
   void onLibraryOpen();

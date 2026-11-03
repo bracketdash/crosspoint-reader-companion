@@ -362,6 +362,14 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // Focus Reading - emphasizes the first part of words with bold
   uint8_t focusReadingEnabled = 0;
   uint8_t readerMenuStyle = READER_MENU_LIST;
+  // Reading companion: a small character whose mood tracks how much you read.
+  // Off by default so nothing about the stock reader changes unless asked for.
+  uint8_t companionEnabled = 0;
+  // Index into companion::COMPANION_SPRITES (0 = the first companion).
+  // Persisted numerically, so sprites/order.txt is append-only.
+  uint8_t companionId = 0;
+  // Draw the companion on the home screen (0 = off, 1 = on).
+  uint8_t companionOnHome = 1;
   // SD card font family name (empty = use built-in fontFamily)
   char sdFontFamilyName[32] = "";
   // Dictionary folder name under /dictionaries (empty = no dictionary)

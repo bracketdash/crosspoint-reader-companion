@@ -52,6 +52,17 @@ bool HalClock::localTime(struct tm& out) const {
   return true;
 }
 
+bool HalClock::getFreshLocalTime(struct tm& out) const {
+  if (!_available) return false;
+
+  Rtc::DateTime dt;
+  if (!_sdkRtc.now(dt)) return false;
+
+  const time_t utc = epochFromUtc(dt);
+  localtime_r(&utc, &out);
+  return true;
+}
+
 bool HalClock::getTime(uint8_t& hour, uint8_t& minute) const {
   struct tm local;
   if (!localTime(local)) return false;

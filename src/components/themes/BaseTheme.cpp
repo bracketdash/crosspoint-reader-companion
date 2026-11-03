@@ -673,6 +673,9 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
         }
       }
 
+      // Boxes and their text both centre on `rect`, not the screen: the home
+      // screen narrows this rect when something else needs the space beside the
+      // cover, and the two have to move together.
       const int boxWidth = maxTextWidth + boxPadding * 2;
       const int boxHeight = totalTextHeight + boxPadding * 2;
       const int boxX = rect.x + (rect.width - boxWidth) / 2;
@@ -685,13 +688,13 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     }
 
     for (const auto& line : lines) {
-      renderer.drawCenteredText(UI_12_FONT_ID, titleYStart, line.c_str(), !bookSelected);
+      UITheme::drawCenteredText(renderer, rect, UI_12_FONT_ID, titleYStart, line.c_str(), !bookSelected);
       titleYStart += renderer.getLineHeight(UI_12_FONT_ID);
     }
 
     if (!truncatedAuthor.empty()) {
       titleYStart += renderer.getLineHeight(UI_10_FONT_ID) / 2;
-      renderer.drawCenteredText(UI_10_FONT_ID, titleYStart, truncatedAuthor.c_str(), !bookSelected);
+      UITheme::drawCenteredText(renderer, rect, UI_10_FONT_ID, titleYStart, truncatedAuthor.c_str(), !bookSelected);
     }
 
     // "Continue Reading" label at the bottom
@@ -707,20 +710,54 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
       const int continueBoxY = continueY - continuePadding / 2;
       renderer.fillRect(continueBoxX, continueBoxY, continueBoxWidth, continueBoxHeight, bookSelected);
       renderer.drawRect(continueBoxX, continueBoxY, continueBoxWidth, continueBoxHeight, !bookSelected);
-      renderer.drawCenteredText(UI_10_FONT_ID, continueY, continueText, !bookSelected);
+      UITheme::drawCenteredText(renderer, rect, UI_10_FONT_ID, continueY, continueText, !bookSelected);
     } else {
-      renderer.drawCenteredText(UI_10_FONT_ID, continueY, tr(STR_CONTINUE_READING), !bookSelected);
+      UITheme::drawCenteredText(renderer, rect, UI_10_FONT_ID, continueY, tr(STR_CONTINUE_READING), !bookSelected);
     }
   } else {
     // No book to continue reading
     const int y =
         bookY + (bookHeight - renderer.getLineHeight(UI_12_FONT_ID) - renderer.getLineHeight(UI_10_FONT_ID)) / 2;
-    renderer.drawCenteredText(UI_12_FONT_ID, y, tr(STR_NO_OPEN_BOOK));
-    renderer.drawCenteredText(UI_10_FONT_ID, y + renderer.getLineHeight(UI_12_FONT_ID), tr(STR_START_READING));
+    UITheme::drawCenteredText(renderer, rect, UI_12_FONT_ID, y, tr(STR_NO_OPEN_BOOK));
+    UITheme::drawCenteredText(renderer, rect, UI_10_FONT_ID, y + renderer.getLineHeight(UI_12_FONT_ID),
+                              tr(STR_START_READING));
   }
 }
 
 int BaseTheme::getMenuRowHeight(const GfxRenderer&) const { return UITheme::getInstance().getMetrics().menuRowHeight; }
+
+int BaseTheme::getMenuContentHeight(const GfxRenderer&, Rect, const int buttonCount) const {
+  // Mirrors the tileY arithmetic in drawButtonMenu below, including the leading
+  // verticalSpacing offset that Lyra does not apply.
+  return BaseMetrics::values.verticalSpacing +
+         buttonCount * (BaseMetrics::values.menuRowHeight + BaseMetrics::values.menuSpacing);
+}
+
+HomeCompanionLayout BaseTheme::getHomeCompanionLayout(const GfxRenderer& renderer, const Rect menuRect,
+                                                      const Rect coverRect, const int buttonCount,
+                                                      const std::function<std::string(int index)>&,
+                                                      const int hintsTop) const {
+  HomeCompanionLayout layout;
+  const int top = menuRect.y + getMenuContentHeight(renderer, menuRect, buttonCount);
+  if (hintsTop - top >= kMinCompanionStripHeight) {
+    layout.region = Rect{menuRect.x, top, menuRect.width, hintsTop - top};
+    return layout;
+  }
+
+  // Rows here are full-width boxes, so there is nothing to sit beside. The
+  // cover tile is the other big block: it centres its book inside whatever rect
+  // it is handed, so narrowing that rect slides the book left and opens a column
+  // on the right. The cover's own 90%-of-width cap scales with the rect, so it
+  // shrinks to suit rather than colliding with the companion.
+  constexpr int kCompanionColumnWidth = 200;
+  constexpr int kSideMargin = 10;
+  if (coverRect.width - kCompanionColumnWidth < kCompanionColumnWidth) return layout;  // too narrow to split
+
+  layout.coverWidth = coverRect.width - kCompanionColumnWidth;
+  layout.region =
+      Rect{coverRect.x + layout.coverWidth, coverRect.y, kCompanionColumnWidth - kSideMargin, coverRect.height};
+  return layout;
+}
 
 void BaseTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount, int selectedIndex,
                                const std::function<std::string(int index)>& buttonLabel,

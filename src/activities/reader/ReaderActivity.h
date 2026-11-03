@@ -52,6 +52,11 @@ class ReaderActivity : public Activity {
   virtual bool skipPages(int amount) { return pageTurn(amount > 0); }
   // A Bluetooth remote asks for the reader menu (true) or a new clipping (false).
   virtual bool remoteShortcut(bool /*readerMenu*/) { return false; }
+
+  // Calls pageTurn() and credits the reading companion when a page actually
+  // moved. One hook instead of one per call site; call this rather than
+  // pageTurn() from input handling so every format is counted the same way.
+  bool pageTurnTracked(bool isForward);
   virtual bool isAtEndOfBook() const = 0;
   virtual void onReturnFromEndOfBook() {}
 

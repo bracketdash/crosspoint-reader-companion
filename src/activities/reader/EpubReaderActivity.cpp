@@ -810,7 +810,7 @@ void EpubReaderActivity::loop() {
     }
 
     if ((millis() - lastPageTurnTime) >= pageTurnDuration) {
-      const bool succeeded = pageTurn(true);
+      const bool succeeded = pageTurnTracked(true);
       notePageTurn(true, succeeded);
       requestUpdate();
       return;
@@ -968,7 +968,7 @@ void EpubReaderActivity::loop() {
     }
     const bool forward = pendingManualTurn > 0;
     pendingManualTurn = 0;
-    const bool succeeded = pageTurn(forward);
+    const bool succeeded = pageTurnTracked(forward);
     notePageTurn(forward, succeeded);
     if (succeeded && pendingManualTurnTouch) haptic_feedback::touchAction();
     pendingManualTurnTouch = false;
@@ -1025,7 +1025,7 @@ void EpubReaderActivity::loop() {
     return;
   }
 
-  const bool succeeded = pageTurn(!prevTriggered);
+  const bool succeeded = pageTurnTracked(!prevTriggered);
   notePageTurn(!prevTriggered, succeeded);
   if (succeeded && (touch.prev || touch.next)) haptic_feedback::touchAction();
   requestUpdate();

@@ -3,6 +3,34 @@
 #include <array>
 #include <utility>
 
+#include "companion/CompanionSprites.generated.h"
+
+namespace {
+// Companion picker. The options are the generated character names, so adding a
+// .grid file surfaces a new choice with no change here.
+SettingInfo buildCompanionCharacterSetting() {
+  SettingInfo s;
+  s.nameId = StrId::STR_COMPANION_CHARACTER;
+  s.type = SettingType::ENUM;
+  s.valuePtr = &CrossPointSettings::companionId;
+  s.key = "companionId";
+  s.category = StrId::STR_CAT_DISPLAY;
+  // Name plus species, because a list of five bare proper nouns tells you
+  // nothing about what you are choosing. The popup cannot show sprites: its
+  // FreeInkUI DialogOption has no icon slot, and adding one would mean patching
+  // the SDK submodule and losing it on the next update.
+  s.enumStringValues.reserve(companion::COMPANION_COUNT);
+  for (int i = 0; i < companion::COMPANION_COUNT; i++) {
+    std::string label = companion::COMPANION_NAMES[i];
+    label += " (";
+    label += companion::COMPANION_KINDS[i];
+    label += ")";
+    s.enumStringValues.emplace_back(std::move(label));
+  }
+  return s;
+}
+}  // namespace
+
 void forEachBaseSetting(SettingVisitor visit, void* context) {
   // Load and save walk this list, so every condition here must be fixed before
   // settings load. Runtime probes belong in getSettingsList().
@@ -61,6 +89,16 @@ void forEachBaseSetting(SettingVisitor visit, void* context) {
   // Night mode = inverted output polarity everywhere (ActivityManager
   // applies it to every activity), so it lives in the Display category.
   emit(SettingInfo::Toggle(StrId::STR_NIGHT_MODE, &CrossPointSettings::screenInverted, "screenInverted",
+                           StrId::STR_CAT_DISPLAY));
+
+  // --- Reading companion ---
+  // Off by default: nothing about the stock reader changes until enabled.
+  emit(SettingInfo::Toggle(StrId::STR_COMPANION_ENABLED, &CrossPointSettings::companionEnabled, "companionEnabled",
+                           StrId::STR_CAT_DISPLAY));
+  // Character names are proper nouns, identical in every UI language, so
+  // they come from the generated sprite table rather than the string table.
+  emit(buildCompanionCharacterSetting());
+  emit(SettingInfo::Toggle(StrId::STR_COMPANION_ON_HOME, &CrossPointSettings::companionOnHome, "companionOnHome",
                            StrId::STR_CAT_DISPLAY));
 
   // --- Reader ---

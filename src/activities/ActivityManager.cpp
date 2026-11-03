@@ -19,6 +19,7 @@
 #include "boot_sleep/SleepActivity.h"
 #include "browser/OpdsBookBrowserActivity.h"
 #include "components/HeaderBackTapTarget.h"
+#include "companion/CompanionTracker.h"
 #include "home/CrashActivity.h"
 #include "home/FileBrowserActivity.h"
 #include "home/HomeActivity.h"
@@ -115,6 +116,11 @@ void ActivityManager::loop() {
     }
     return;
   }
+
+  // Banks reading time for the companion. Self-gating: does nothing unless a
+  // reader session is open, so it is safe to drive from the shared loop rather
+  // than duplicating it into every reader subclass.
+  COMPANION.tick();
 
   if (currentActivity) {
     if (!currentActivity->isHomeActivity() && mappedInput.wasHomeGesture()) {
@@ -448,7 +454,7 @@ bool ActivityManager::remoteTurn(const bool forward, const bool chapter) {
                           reader->inputOverPage())) {
     return false;
   }
-  const bool turned = chapter ? reader->skipPages(forward ? 1 : -1) : reader->pageTurn(forward);
+  const bool turned = chapter ? reader->skipPages(forward ? 1 : -1) : reader->pageTurnTracked(forward);
   if (turned) requestUpdate();
   return turned;
 }

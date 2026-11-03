@@ -18,6 +18,7 @@
 #include "RecentBooksStore.h"
 #include "SdCardFontSystem.h"
 #include "XtcReaderActivity.h"
+#include "companion/CompanionTracker.h"
 #include "util/PluginEvents.h"
 
 ReaderActivity::ReaderActivity(const char* name, GfxRenderer& renderer, MappedInputManager& mappedInput,
@@ -76,6 +77,10 @@ void ReaderActivity::onEnter() {
   sdFontSystem.ensureLoaded(renderer);
   applyInitialOrientation();
 
+  // Reading session starts here so every format (EPUB/TXT/XTC) is covered by
+  // one hook. No-op unless the companion is enabled.
+  COMPANION.beginSession();
+
   if (!loadBook()) {
     if (!handleLoadFailure()) finish();
     return;
@@ -96,6 +101,10 @@ void ReaderActivity::rememberBookOnceRendered() {
 
 void ReaderActivity::onExit() {
   Activity::onExit();
+
+  // Banks credited time and persists it. Runs before deep sleep too, because
+  // ActivityManager::goToSleep() drives the outgoing activity's onExit().
+  COMPANION.endSession();
 
   // Keep rebuildable font buffers from pinning the heap between reading sessions.
   if (auto* fontCache = renderer.getFontCacheManager()) {
@@ -157,6 +166,14 @@ void ReaderActivity::flushReaderSession() {
     pluginevents::emit(pluginevents::Event::ReaderSession, vars, 8);
   }
   readerSession.reset();
+}
+
+bool ReaderActivity::pageTurnTracked(const bool isForward) {
+  const bool turned = pageTurn(isForward);
+  // Only a page that actually moved counts: a turn refused at the end of the
+  // book must not keep the reading session looking active.
+  if (turned) COMPANION.onPageTurn();
+  return turned;
 }
 
 bool ReaderActivity::handleBackNavigation() {
@@ -236,7 +253,7 @@ void ReaderActivity::loop() {
   const bool skip =
       !fromTilt && SETTINGS.longPressButtonBehavior == SETTINGS.CHAPTER_SKIP && heldMs >= ReaderUtils::SKIP_HOLD_MS;
 
-  const bool changed = skip ? skipPages(prevTriggered ? -10 : 10) : pageTurn(!prevTriggered);
+  const bool changed = skip ? skipPages(prevTriggered ? -10 : 10) : pageTurnTracked(!prevTriggered);
   // A skip is navigation, not reading: it never counts toward session dwell.
   notePageTurn(!skip && !prevTriggered, changed);
   if (changed && (touch.prev || touch.next)) haptic_feedback::touchAction(skip);
