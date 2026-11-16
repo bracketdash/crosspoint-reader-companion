@@ -716,7 +716,10 @@ void HomeActivity::loop() {
   const Rect content = UITheme::getInstance().getContentArea(renderer);
   const int coverColumnCount = std::max(1, metrics.homeRecentBooksCount);
   const int recentCount = std::min(static_cast<int>(recentBooks.size()), coverColumnCount);
-  const int coverColumnWidth = (content.width - 2 * metrics.contentSidePadding) / coverColumnCount;
+  // The companion can narrow the cover tile to sit beside it; a tap on the
+  // companion must not open the book.
+  const int coverSpan = coverRectW > 0 ? coverRectW : content.width;
+  const int coverColumnWidth = (coverSpan - 2 * metrics.contentSidePadding) / coverColumnCount;
   int touchedBook = -1;
   const auto coverTouch = mappedInput.colTouch(touchedBook, content.x + metrics.contentSidePadding, coverColumnWidth,
                                                recentCount, metrics.homeTopPadding,
@@ -839,19 +842,22 @@ void HomeActivity::render(RenderLock&&) {
     menuIcons.insert(menuIcons.begin(), Book);
   }
 
-  Rect menuRect{content.x, metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset, content.width,
+  Rect menuRect{content.x, metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset,
+                content.width,
                 pageHeight - (metrics.headerHeight + metrics.homeTopPadding + metrics.verticalSpacing +
                               metrics.homeMenuTopOffset + metrics.buttonHintsHeight)};
   const Rect coverRect{content.x, metrics.homeTopPadding, content.width, metrics.homeCoverTileHeight};
   const auto labelAt = [&menuItems](int index) { return std::string(menuItems[index]); };
+  // Touch boards have no hint row, so stop at the content area's bottom edge.
+  const int hintsTop = std::min(pageHeight - metrics.buttonHintsHeight, content.y + content.height);
 
   // The theme decides where the companion goes and what gives up room for it.
   // Deriving it here from the metrics table is only ever right for one theme:
   // each spaces its rows differently, RoundedRaff sizes them from the font, and
   // a theme whose rows are narrower than the screen has more usable space
   // beside its menu than underneath it.
-  const auto companion = GUI.getHomeCompanionLayout(renderer, menuRect, coverRect, static_cast<int>(menuItems.size()),
-                                                    labelAt, pageHeight - metrics.buttonHintsHeight);
+  const auto companion =
+      GUI.getHomeCompanionLayout(renderer, menuRect, coverRect, static_cast<int>(menuItems.size()), labelAt, hintsTop);
   if (companion.menuWidth > 0) menuRect.width = companion.menuWidth;
   companionMenuRight = menuRect.x + menuRect.width;
 
