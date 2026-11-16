@@ -31,8 +31,8 @@ void CompanionTracker::refreshDay() {
     return;
   }
   clockValid = true;
-  localDay = companion::localDayNumber(local.tm_year + 1900, local.tm_mon + 1, local.tm_mday, local.tm_hour,
-                                       local.tm_min, 0);
+  localDay =
+      companion::localDayNumber(local.tm_year + 1900, local.tm_mon + 1, local.tm_mday, local.tm_hour, local.tm_min, 0);
 }
 
 void CompanionTracker::beginSession() {
