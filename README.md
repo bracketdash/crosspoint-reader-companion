@@ -16,14 +16,14 @@ one firmware. See [What changed in version 2](#what-changed-in-version-2).
 
 > ### ⚠️ Device support
 >
-> **Developed and tested only on the Xteink X3**, in both version 1 and version 2. That is the
-> only device this has actually run on.
+> **Developed and tested on the Xteink X3.** Version 2.1 adds a release build for the Xteink
+> X4 Pro, which has not yet run on real hardware.
 >
 > | Device | Status |
 > | --- | --- |
 > | **Xteink X3** | ✅ Developed and tested here |
-> | **Xteink X4** | ⚠️ Untested. Should run — same chip, and the release binary includes it — but the X4 has **no RTC**, so streaks and day-based decay are unavailable (see below) |
-> | **Xteink X4 Pro** | ❌ **Do not flash the release binary** — the X4 Pro is ESP32-**S3** and X3/X4 are ESP32-**C3**, so it will not boot. Needs its own `x4pro` build, which has **not been verified to compile** here (see [Building from source](#building-from-source)) |
+> | **Xteink X4** | ⚠️ Untested. Should run — same chip, and `firmware.bin` includes it — but the X4 has **no RTC**, so streaks and day-based decay are unavailable (see below) |
+> | **Xteink X4 Pro** | ⚠️ Untested on hardware. Has its **own file, `firmware-x4pro.bin`**. The X4 Pro is ESP32-**S3** and X3/X4 are ESP32-**C3**, so the two files are not interchangeable and the wrong one will not boot. It has an RTC, so streaks work |
 > | Anything else | Untested |
 >
 > **Back up your current firmware before flashing.** Instructions are in
@@ -155,8 +155,12 @@ fallback applies.
 
 ## Install
 
-The release binary is for **X3 and X4 only** (both ESP32-C3). **X4 Pro owners must build from
-source** — a C3 binary will not boot on its S3 chip.
+Each release has two files. Use the one for your device — the wrong one will not boot:
+
+| Device | File | Chip |
+| --- | --- | --- |
+| Xteink X3 / X4 | `firmware.bin` | ESP32-C3 |
+| Xteink X4 Pro | `firmware-x4pro.bin` | ESP32-S3 |
 
 ### Step 1 — back up your current firmware (please do this)
 
@@ -172,6 +176,9 @@ pip install esptool
 esptool --chip esp32c3 --port /dev/cu.usbmodemXXXX --baud 921600 \
   read-flash 0 0x1000000 crosspoint-backup.bin
 ```
+
+On an **X4 Pro**, use `--chip esp32s3` instead of `--chip esp32c3`, here and in the commands
+below. Its flash is also 16 MB, so the size is the same.
 
 Find your port with `ls /dev/cu.*` on macOS, or `dmesg | grep tty` on Linux. The file should come
 out at exactly 16,777,216 bytes. Keep a copy somewhere other than the machine you flash from.
@@ -191,16 +198,20 @@ the exact build you had.
 
 **No toolchain needed:**
 
-1. Download `firmware.bin` from the [latest release](https://github.com/bracketdash/crosspoint-reader-companion/releases/latest)
+1. Download `firmware.bin` (X3/X4) or `firmware-x4pro.bin` (X4 Pro) from the [latest release](https://github.com/bracketdash/crosspoint-reader-companion/releases/latest)
 2. Connect your device by USB-C and wake it
 3. Go to [crosspointreader.com/#flash-tools](https://crosspointreader.com/#flash-tools)
-4. Pick your device (**X3** or **X4**), choose **Custom .bin**, and upload the file
+4. Pick your device (**X3**, **X4** or **Xteink X4Pro**), choose **Custom .bin**, and upload the file
 
 **Or from a terminal:**
 
 ```bash
 esptool --chip esp32c3 --port /dev/cu.usbmodemXXXX --baud 921600 \
   write-flash 0x10000 firmware.bin
+
+# X4 Pro
+esptool --chip esp32s3 --port /dev/cu.usbmodemXXXX --baud 921600 \
+  write-flash 0x10000 firmware-x4pro.bin
 ```
 
 Your books, reading progress, settings and saved Wi-Fi networks all live on the SD card — the
@@ -276,8 +287,8 @@ Pick the environment for your device:
 
 | Device | Environment | Chip |
 | --- | --- | --- |
-| X3 / X4 | `default` or `gh_release` | ESP32-C3 |
-| **X4 Pro** | **`x4pro`** | ESP32-**S3** |
+| X3 / X4 | `default` (development) or `gh_release` (release) | ESP32-C3 |
+| **X4 Pro** | **`x4pro`** (development) or **`x4pro-gh_release`** (release) | ESP32-**S3** |
 
 ```bash
 pio run -e x4pro -t upload    # X4 Pro
@@ -285,14 +296,8 @@ pio run -e x4pro -t upload    # X4 Pro
 
 The chip differs, so the binaries are not interchangeable.
 
-**On the X4 Pro specifically:** the `x4pro` environment has not been built successfully here. The
-attempt failed while ESP-IDF configured its S3 toolchain, before reaching any companion code, so
-whether this compiles for S3 is simply unknown rather than known-broken. Nothing in the companion
-is chip-specific — no assembly, no C3 registers, and all layout comes from runtime screen
-dimensions — so there is reason to expect it works. But nobody has demonstrated it.
-
-If you have an X4 Pro and get it building, please open an issue. That, and a photo, is all it
-would take to move it into the tested column.
+The development environments (`default`, `x4pro`) log at debug level and wait for a USB serial
+connection at startup. Use the `gh_release` environments for a build to keep on the device.
 
 Needs [pioarduino](https://github.com/pioarduino/pioarduino) 6.1.19 (the PlatformIO fork CrossPoint
 builds with; stock PlatformIO fails at the link step) and Python 3.8+. On Windows, build from
@@ -363,6 +368,19 @@ its shading, and they are resolved at build time so the render path stays trivia
 
 ---
 
+## What changed in version 2.1
+
+Version 2.1 adds the **Xteink X4 Pro**. There is now a release file for it, `firmware-x4pro.bin`,
+alongside the X3/X4 `firmware.bin`.
+
+The X4 Pro is the first supported device with a touchscreen, so the home screen's tap targets now
+follow the companion: on the Classic theme, tapping the companion no longer opens the book beside
+it. Touch devices have no on-screen button hints, so the companion also gets that room at the
+bottom of the screen. The X4 Pro has a real-time clock, so streaks and every mood work, unlike on
+the plain X4.
+
+---
+
 ## What changed in version 2
 
 Version 2 is the same companion, moved onto CrossPoint 2.0.0. Everything CrossPoint added between
@@ -392,7 +410,7 @@ sensible to me and will annoy you.
 **Please open an issue.** Anything is fair game:
 
 - **Bugs** — [report one](https://github.com/bracketdash/crosspoint-reader-companion/issues/new?template=bug_report.yml).
-  Reports from an **X4** or **X4 Pro** are especially valuable, since neither has ever run this
+  Reports from an **X4** or **X4 Pro** are especially valuable
 - **Ideas and requests** — [suggest one](https://github.com/bracketdash/crosspoint-reader-companion/issues/new?template=feature_request.yml).
   New characters, better lines, different thresholds, a different place on screen
 - **Lines that are not funny enough.** Genuinely. The writing is half of this, and it is easy to
