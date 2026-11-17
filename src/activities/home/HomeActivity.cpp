@@ -320,6 +320,19 @@ bool HomeActivity::storeCoverBuffer() {
   return true;
 }
 
+namespace {
+// The character is sized by height, but on a touch board with no hint row the
+// strip is tall enough to pick the largest scale, which on the 480px-wide X4 Pro
+// takes nearly a third of the screen. Capped to a share of the width so it stays
+// in proportion to the menu and leaves the bubble room.
+int maxScaleForWidth(const int width, const int maxScale) {
+  constexpr int MAX_WIDTH_PERCENT = 22;
+  int scale = maxScale;
+  while (scale > 1 && companion::poseWidth(scale) * 100 > width * MAX_WIDTH_PERCENT) scale--;
+  return scale;
+}
+}  // namespace
+
 void HomeActivity::drawCompanion(const Rect region) const {
   if (!SETTINGS.companionEnabled || !SETTINGS.companionOnHome) return;
   if (region.width <= 0 || region.height <= 0) return;
@@ -348,6 +361,10 @@ void HomeActivity::drawCompanion(const Rect region) const {
   constexpr int WALK_TRAVEL = 14;
   constexpr int BOB_HEIGHT = 3;
   constexpr int MAX_SCALE = 4;
+  // Quotes use the small font: at UI_10 the longer ones ran past the bubble's
+  // three lines and ended in an ellipsis.
+  constexpr int QUOTE_FONT = SMALL_FONT_ID;
+  constexpr int QUOTE_MAX_LINES = 4;
 
   const int available = stripBottom - stripTop - BOTTOM_MARGIN;
 
@@ -406,7 +423,7 @@ void HomeActivity::drawCompanion(const Rect region) const {
 
   // Whole-pixel scales only: fractional scaling would smear the baked dither.
   const int labelBlock = LABEL_GAP + labelH + SUBLABEL_GAP + subH;
-  int scale = MAX_SCALE;
+  int scale = maxScaleForWidth(region.width, MAX_SCALE);
   while (scale > 1 && companion::poseHeight(scale) + BOB_HEIGHT + labelBlock > available) scale--;
 
   const int spriteW = companion::poseWidth(scale);
@@ -474,7 +491,7 @@ void HomeActivity::drawCompanion(const Rect region) const {
   companion::drawSpeechBubble(renderer, bubbleX, bubbleY, bubbleW, bubbleH, TAIL_LENGTH);
 
   const Rect textBounds{bubbleX + BUBBLE_PAD, bubbleY + BUBBLE_PAD, bubbleW - BUBBLE_PAD * 2, bubbleH - BUBBLE_PAD * 2};
-  UITheme::drawCenteredWrappedText(renderer, textBounds, UI_10_FONT_ID, quote, 3);
+  UITheme::drawCenteredWrappedText(renderer, textBounds, QUOTE_FONT, quote, QUOTE_MAX_LINES);
 }
 
 void HomeActivity::drawCompanionCompact(const int stripTop, const int available, const int leftEdge,
@@ -496,7 +513,7 @@ void HomeActivity::drawCompanionCompact(const int stripTop, const int available,
 
   // Nothing is stacked here, so the character is free to take the whole strip.
   int scale = 0;
-  for (int candidate = MAX_SCALE; candidate >= 1; candidate--) {
+  for (int candidate = maxScaleForWidth(pageWidth - leftEdge, MAX_SCALE); candidate >= 1; candidate--) {
     if (companion::poseHeight(candidate) + BOB_HEIGHT <= available) {
       scale = candidate;
       break;
@@ -527,12 +544,11 @@ void HomeActivity::drawCompanionCompact(const int stripTop, const int available,
   const int usableH = available - STRIP_INSET * 2;
   const int bigLineH = renderer.getLineHeight(UI_10_FONT_ID);
 
-  // On the shortest strips a UI_10 bubble holds one line, which truncates the
-  // longer quotes, and a full-size mood label towers over a scale-1 character.
-  // Both drop to the small font together, so the text stays subordinate to the
-  // companion and every quote survives intact.
+  // Quotes always use the small font: at UI_10 the longer ones truncate. On the
+  // shortest strips a full-size mood label also towers over a scale-1
+  // character, so it drops to the small font too.
   const bool tight = usableH < bigLineH * 2 + PAD * 2;
-  const int quoteFont = tight ? SMALL_FONT_ID : UI_10_FONT_ID;
+  const int quoteFont = SMALL_FONT_ID;
   const int labelFont = tight ? SMALL_FONT_ID : UI_10_FONT_ID;
 
   const int labelH = renderer.getTextHeight(labelFont) + DESCENDER_ALLOWANCE;
@@ -558,7 +574,7 @@ void HomeActivity::drawCompanionCompact(const int stripTop, const int available,
   // instead just crowds the menu row above.
   const int lineH = renderer.getLineHeight(quoteFont);
   const int textW = bubbleW - PAD * 2;
-  const int maxLines = std::max(1, std::min(3, (usableH - PAD * 2) / lineH));
+  const int maxLines = std::max(1, std::min(4, (usableH - PAD * 2) / lineH));
   std::vector<std::string> lines;
   if (renderer.getTextWidth(quoteFont, quote) <= textW) {
     lines.emplace_back(quote);
@@ -919,6 +935,8 @@ void HomeActivity::drawCompanionColumn(const Rect region, const char* label, con
   constexpr int BOB_HEIGHT = 3;
   constexpr int MAX_SCALE = 4;
   constexpr int MIN_BUBBLE_W = 90;
+  constexpr int QUOTE_FONT = SMALL_FONT_ID;  // UI_10 truncated the longer quotes
+  constexpr int QUOTE_MAX_LINES = 4;
 
   const int colX = region.x + MARGIN;
   const int colW = region.width - MARGIN * 2;
@@ -928,17 +946,17 @@ void HomeActivity::drawCompanionColumn(const Rect region, const char* label, con
 
   const int labelH = renderer.getTextHeight(UI_10_FONT_ID) + DESCENDER_ALLOWANCE;
   const int subH = renderer.getTextHeight(SMALL_FONT_ID) + DESCENDER_ALLOWANCE;
-  const int lineH = renderer.getLineHeight(UI_10_FONT_ID);
+  const int lineH = renderer.getLineHeight(QUOTE_FONT);
   const int textW = colW - PAD * 2;
 
   // The bubble is measured before the character is sized, because the quote
   // needs however many lines it needs and the character takes what is left.
   std::vector<std::string> lines;
   if (quote) {
-    if (renderer.getTextWidth(UI_10_FONT_ID, quote) <= textW) {
+    if (renderer.getTextWidth(QUOTE_FONT, quote) <= textW) {
       lines.emplace_back(quote);
     } else {
-      lines = renderer.wrappedText(UI_10_FONT_ID, quote, textW, 3);
+      lines = renderer.wrappedText(QUOTE_FONT, quote, textW, QUOTE_MAX_LINES);
     }
   }
   const int bubbleH = lines.empty() ? 0 : static_cast<int>(lines.size()) * lineH + PAD * 2;
@@ -967,7 +985,7 @@ void HomeActivity::drawCompanionColumn(const Rect region, const char* label, con
     const Rect textBounds{colX + PAD, blockTop, textW, bubbleH};
     int textY = blockTop + PAD;
     for (const auto& line : lines) {
-      UITheme::drawCenteredText(renderer, textBounds, UI_10_FONT_ID, textY, line.c_str());
+      UITheme::drawCenteredText(renderer, textBounds, QUOTE_FONT, textY, line.c_str());
       textY += lineH;
     }
   }
