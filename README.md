@@ -17,13 +17,13 @@ one firmware. See [What changed in version 2](#what-changed-in-version-2).
 > ### ⚠️ Device support
 >
 > **Developed and tested on the Xteink X3.** Version 2.1 adds a release build for the Xteink
-> X4 Pro, which has not yet run on real hardware.
+> X4 Pro, which has now run on a real X4 Pro.
 >
 > | Device | Status |
 > | --- | --- |
 > | **Xteink X3** | ✅ Developed and tested here |
 > | **Xteink X4** | ⚠️ Untested. Should run — same chip, and `firmware.bin` includes it — but the X4 has **no RTC**, so streaks and day-based decay are unavailable (see below) |
-> | **Xteink X4 Pro** | ⚠️ Untested on hardware. Has its **own file, `firmware-x4pro.bin`**. The X4 Pro is ESP32-**S3** and X3/X4 are ESP32-**C3**, so the two files are not interchangeable and the wrong one will not boot. It has an RTC, so streaks work |
+> | **Xteink X4 Pro** | ✅ Runs on hardware. Has its **own file, `firmware-x4pro.bin`**. The X4 Pro is ESP32-**S3** and X3/X4 are ESP32-**C3**, so the two files are not interchangeable and the wrong one will not boot. It has an RTC, so streaks work |
 > | Anything else | Untested |
 >
 > **Back up your current firmware before flashing.** Instructions are in
@@ -365,6 +365,14 @@ its shading, and they are resolved at build time so the render path stays trivia
   half-plane test for the tail, since `GfxRenderer` has no rounded-rect primitive.
 - **State** persists to `/.crosspoint/companion.json`, checkpointed mid-session so a flat battery
   does not discard an evening's reading.
+
+---
+
+## What changed in version 2.1.1
+
+Fixes from the first run on a real X4 Pro. The speech bubble's quotes use a smaller font, so the
+longer ones fit instead of ending in "…". The character is also capped to a share of the screen
+width, so it no longer crowds the X4 Pro's narrower screen.
 
 ---
 
